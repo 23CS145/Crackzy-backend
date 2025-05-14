@@ -1,17 +1,22 @@
 const Note = require('../models/Note');
 const asyncHandler = require('express-async-handler');
 
-// @desc    Get all notes
-// @route   GET /api/notes
-// @access  Private
 const getNotes = asyncHandler(async (req, res) => {
   const notes = await Note.find({}).populate('uploadedBy', 'name');
   res.json(notes);
 });
 
-// @desc    Create a note
-// @route   POST /api/notes
-// @access  Private
+const getNoteById = asyncHandler(async (req, res) => {
+  const note = await Note.findById(req.params.id).populate('uploadedBy', 'name');
+  
+  if (note) {
+    res.json(note);
+  } else {
+    res.status(404);
+    throw new Error('Note not found');
+  }
+});
+
 const createNote = asyncHandler(async (req, res) => {
   const { title, content, fileUrl } = req.body;
 
@@ -26,14 +31,32 @@ const createNote = asyncHandler(async (req, res) => {
   res.status(201).json(createdNote);
 });
 
-// @desc    Delete a note
-// @route   DELETE /api/notes/:id
-// @access  Private
+const updateNote = asyncHandler(async (req, res) => {
+  const { title, content, fileUrl } = req.body;
+  const note = await Note.findById(req.params.id);
+
+  if (!note) {
+    res.status(404);
+    throw new Error('Note not found');
+  }
+
+  if (note.uploadedBy.toString() !== req.user._id.toString() && req.user.role !== 'admin') {
+    res.status(401);
+    throw new Error('Not authorized to update this note');
+  }
+
+  note.title = title || note.title;
+  note.content = content || note.content;
+  note.fileUrl = fileUrl || note.fileUrl;
+
+  const updatedNote = await note.save();
+  res.json(updatedNote);
+});
+
 const deleteNote = asyncHandler(async (req, res) => {
   const note = await Note.findById(req.params.id);
 
   if (note) {
-    // Check if the user is admin or the note creator
     if (
       note.uploadedBy.toString() !== req.user._id.toString() &&
       req.user.role !== 'admin'
@@ -52,6 +75,8 @@ const deleteNote = asyncHandler(async (req, res) => {
 
 module.exports = {
   getNotes,
+  getNoteById,
   createNote,
+  updateNote,
   deleteNote,
 };

@@ -3,7 +3,6 @@ const asyncHandler = require('express-async-handler');
 const User = require('../models/User');
 const config = require('../config/config');
 
-// Protect routes
 const protect = asyncHandler(async (req, res, next) => {
   let token;
 
@@ -29,7 +28,6 @@ const protect = asyncHandler(async (req, res, next) => {
   }
 });
 
-// Admin middleware
 const admin = (req, res, next) => {
   if (req.user && req.user.role === 'admin') {
     next();

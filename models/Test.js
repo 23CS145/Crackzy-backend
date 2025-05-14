@@ -15,6 +15,21 @@ const testSchema = mongoose.Schema(
       required: true,
       default: 30,
     },
+    category: {
+      type: String,
+      required: true,
+      enum: ['RBI', 'SBI', 'IBPS', 'RRB', 'SSC', 'UPSC', 'Other'],
+      default: 'Other'
+    },
+    subCategory: {
+      type: String,
+      required: false
+    },
+    difficulty: {
+      type: String,
+      enum: ['Easy', 'Medium', 'Hard'],
+      default: 'Medium'
+    },
     questions: [
       {
         questionText: {

@@ -3,9 +3,6 @@ const jwt = require('jsonwebtoken');
 const asyncHandler = require('express-async-handler');
 const config = require('../config/config');
 
-// @desc    Register a new user
-// @route   POST /api/auth/register
-// @access  Public
 const registerUser = asyncHandler(async (req, res) => {
   const { name, email, password, role, adminSecret } = req.body;
 
@@ -15,15 +12,13 @@ const registerUser = asyncHandler(async (req, res) => {
     throw new Error('User already exists');
   }
 
-  // Determine the role for the new user
   let userRole = 'user';
   if (role === 'admin') {
-    if (adminSecret === process.env.ADMIN_CREATION_SECRET) {
-      userRole = 'admin';
-    } else {
+    if (adminSecret !== config.ADMIN_CREATION_SECRET) {
       res.status(403);
       throw new Error('Invalid admin creation secret');
     }
+    userRole = 'admin';
   }
 
   const user = await User.create({
@@ -47,9 +42,6 @@ const registerUser = asyncHandler(async (req, res) => {
   }
 });
 
-// @desc    Auth user & get token
-// @route   POST /api/auth/login
-// @access  Public
 const authUser = asyncHandler(async (req, res) => {
   const { email, password } = req.body;
 
@@ -69,9 +61,6 @@ const authUser = asyncHandler(async (req, res) => {
   }
 });
 
-// @desc    Get user profile
-// @route   GET /api/auth/profile
-// @access  Private
 const getUserProfile = asyncHandler(async (req, res) => {
   const user = await User.findById(req.user._id).select('-password');
 
@@ -83,7 +72,6 @@ const getUserProfile = asyncHandler(async (req, res) => {
   }
 });
 
-// Generate JWT
 const generateToken = (id) => {
   return jwt.sign({ id }, config.JWT_SECRET, {
     expiresIn: config.JWT_EXPIRE,

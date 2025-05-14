@@ -1,17 +1,11 @@
 const Test = require('../models/Test');
 const asyncHandler = require('express-async-handler');
 
-// @desc    Get all tests
-// @route   GET /api/tests
-// @access  Public
 const getTests = asyncHandler(async (req, res) => {
   const tests = await Test.find({}).populate('createdBy', 'name');
   res.json(tests);
 });
 
-// @desc    Get single test
-// @route   GET /api/tests/:id
-// @access  Public
 const getTestById = asyncHandler(async (req, res) => {
   const test = await Test.findById(req.params.id).populate('createdBy', 'name');
 
@@ -23,9 +17,6 @@ const getTestById = asyncHandler(async (req, res) => {
   }
 });
 
-// @desc    Create a test
-// @route   POST /api/tests
-// @access  Private/Admin
 const createTest = asyncHandler(async (req, res) => {
   const { title, description, duration, questions } = req.body;
 
@@ -41,9 +32,6 @@ const createTest = asyncHandler(async (req, res) => {
   res.status(201).json(createdTest);
 });
 
-// @desc    Update a test
-// @route   PUT /api/tests/:id
-// @access  Private/Admin
 const updateTest = asyncHandler(async (req, res) => {
   const { title, description, duration, questions } = req.body;
 
@@ -63,9 +51,6 @@ const updateTest = asyncHandler(async (req, res) => {
   }
 });
 
-// @desc    Delete a test
-// @route   DELETE /api/tests/:id
-// @access  Private/Admin
 const deleteTest = asyncHandler(async (req, res) => {
   const test = await Test.findById(req.params.id);
 
@@ -78,10 +63,25 @@ const deleteTest = asyncHandler(async (req, res) => {
   }
 });
 
+const getTestsByCategory = asyncHandler(async (req, res) => {
+  const { category } = req.params;
+  
+  const tests = await Test.find({ category })
+    .populate('createdBy', 'name')
+    .sort({ createdAt: -1 });
+
+  res.json({
+    success: true,
+    count: tests.length,
+    data: tests
+  });
+});
+
 module.exports = {
   getTests,
   getTestById,
   createTest,
   updateTest,
   deleteTest,
+  getTestsByCategory
 };

@@ -22,6 +22,21 @@ const quizQuestionSchema = mongoose.Schema(
     category: {
       type: String,
       required: true,
+      enum: ['RBI', 'SBI', 'IBPS', 'RRB', 'SSC', 'UPSC', 'General'],
+      default: 'General'
+    },
+    subCategory: {
+      type: String,
+      required: false
+    },
+    difficulty: {
+      type: String,
+      enum: ['Easy', 'Medium', 'Hard'],
+      default: 'Medium'
+    },
+    active: {
+      type: Boolean,
+      default: true,
     },
   },
   {

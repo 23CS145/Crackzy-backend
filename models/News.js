@@ -14,6 +14,12 @@ const newsSchema = mongoose.Schema(
       type: String,
       required: true,
     },
+    category: {
+      type: String,
+      required: true,
+      enum: ['RBI', 'SBI', 'IBPS', 'RRB', 'SSC', 'UPSC', 'General'],
+      default: 'General'
+    },
     isImportant: {
       type: Boolean,
       default: false,
