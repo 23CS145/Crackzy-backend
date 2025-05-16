@@ -25,8 +25,26 @@ if (process.env.NODE_ENV === 'development') {
   app.use(morgan('dev'));
 }
 
-app.use(cors());
+// ✅ Corrected CORS Configuration
+const allowedOrigins = [
+  'http://localhost:5173',   // Local frontend
+  'https://crackzy.vercel.app', // Future deployed frontend
+];
 
+app.use(cors({
+  origin: function (origin, callback) {
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  credentials: true,
+}));
+
+// Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/tests', testRoutes);
 app.use('/api/notes', noteRoutes);
@@ -34,6 +52,7 @@ app.use('/api/news', newsRoutes);
 app.use('/api/games', gameRoutes);
 app.use('/api/users', userRoutes);
 
+// Error handling
 app.use(notFound);
 app.use(errorHandler);
 
