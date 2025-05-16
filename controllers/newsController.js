@@ -67,9 +67,24 @@ const deleteNews = asyncHandler(async (req, res) => {
     throw new Error('News not found');
   }
 });
+
 const getNewsCategories = asyncHandler(async (req, res) => {
-  const categories = await News.distinct('category');
-  res.json(categories);
+  try {
+    const categories = await News.aggregate([
+      { $group: { _id: "$category" } },
+      { $project: { _id: 0, category: "$_id" } }
+    ]);
+    
+    const categoryList = categories.map(c => c.category);
+    res.json(categoryList);
+  } catch (error) {
+    console.error('Get Categories Error:', error);
+    res.status(500).json({ 
+      success: false, 
+      error: 'Failed to fetch categories',
+      details: error.message 
+    });
+  }
 });
 module.exports = {
   getNews,

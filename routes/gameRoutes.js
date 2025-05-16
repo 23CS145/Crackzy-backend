@@ -1,28 +1,22 @@
 const express = require('express');
 const router = express.Router();
 const {
-  getQuizQuestions,
-  submitQuizAnswers,
-  getQuizResults,
+  getGames,
+  getGameById,
+  submitGameResults,
+  getGameResults,
 } = require('../controllers/gameController');
 const { protect } = require('../middleware/authMiddleware');
 
-// @desc    Get quiz questions
-// @route   GET /api/game/quiz
-// @access  Private
-router.route('/quiz')
-  .get(protect, getQuizQuestions);
+router.route('/')
+  .get(protect, getGames);
 
-// @desc    Submit quiz answers
-// @route   POST /api/game/quiz
-// @access  Private
-router.route('/quiz')
-  .post(protect, submitQuizAnswers);
+router.route('/:id')
+  .get(protect, getGameById);
 
-// @desc    Get user's quiz results
-// @route   GET /api/game/results
-// @access  Private
 router.route('/results')
-  .get(protect, getQuizResults);
+  .post(protect, submitGameResults)
+  .get(protect, getGameResults);
+  
 
 module.exports = router;

@@ -4,10 +4,7 @@ const QuizQuestion = require('../models/QuizQuestion');
 
 dotenv.config();
 
-mongoose.connect(process.env.MONGO_URI, {
-  useNewUrlParser: true,
-  useUnifiedTopology: true,
-});
+mongoose.connect(process.env.MONGO_URI);
 
 const importData = async () => {
   try {
@@ -22,7 +19,7 @@ const importData = async () => {
           { optionText: 'Saturn', isCorrect: false },
           { optionText: 'Mars', isCorrect: false },
         ],
-        category: 'Science',
+        category: 'General',
       },
       {
         questionText: 'Which country hosted the 2020 Summer Olympics?',
@@ -32,7 +29,7 @@ const importData = async () => {
           { optionText: 'Brazil', isCorrect: false },
           { optionText: 'USA', isCorrect: false },
         ],
-        category: 'Sports',
+        category: 'General',
       },
       {
         questionText: 'Who painted the Mona Lisa?',
@@ -42,7 +39,7 @@ const importData = async () => {
           { optionText: 'Leonardo da Vinci', isCorrect: true },
           { optionText: 'Michelangelo', isCorrect: false },
         ],
-        category: 'Art',
+        category: 'General',
       },
       {
         questionText: 'What is the capital of Australia?',
@@ -52,7 +49,7 @@ const importData = async () => {
           { optionText: 'Canberra', isCorrect: true },
           { optionText: 'Perth', isCorrect: false },
         ],
-        category: 'Geography',
+        category: 'General',
       },
       {
         questionText: 'Which element has the chemical symbol "O"?',
@@ -62,7 +59,7 @@ const importData = async () => {
           { optionText: 'Osmium', isCorrect: false },
           { optionText: 'Oganesson', isCorrect: false },
         ],
-        category: 'Science',
+        category: 'General',
       },
     ];
 

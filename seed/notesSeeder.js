@@ -5,10 +5,8 @@ const User = require('../models/User');
 
 dotenv.config();
 
-mongoose.connect(process.env.MONGO_URI, {
-  useNewUrlParser: true,
-  useUnifiedTopology: true,
-});
+mongoose.connect(process.env.MONGO_URI);
+
 
 const importData = async () => {
   try {

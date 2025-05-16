@@ -1,44 +1,68 @@
 const mongoose = require('mongoose');
-const QuizQuestion = require('../models/QuizQuestion');
-const QuizResult = require('../models/QuizResults');
+const Game = require('../models/Game');
+const GameResult = require('../models/GameResult');
 const asyncHandler = require('express-async-handler');
 
-// Update getQuizQuestions to accept category parameter
-const getQuizQuestions = asyncHandler(async (req, res) => {
-  const { category } = req.query;
-  
+const getGames = asyncHandler(async (req, res) => {
   try {
+    const { category, type } = req.query;
     const matchStage = { active: true };
-    if (category) {
-      matchStage.category = category;
-    }
+    
+    if (category) matchStage.category = category;
+    if (type) matchStage.type = type;
 
-    const questions = await QuizQuestion.aggregate([
+    const pipeline = [
       { $match: matchStage },
       { $sample: { size: 10 } },
-      {
+      { 
         $project: {
-          questionText: 1,
-          options: 1,
+          title: 1,
+          description: 1,
+          type: 1,
           category: 1,
           difficulty: 1,
-          createdAt: 1
+          questions: 1,
+          pairs: 1
         }
       }
-    ]);
+    ];
+
+    const games = await Game.aggregate(pipeline);
     
-    if (!questions.length) {
+    if (!games.length) {
+      return res.status(200).json({ 
+        success: true, 
+        message: 'No games found', 
+        data: [] 
+      });
+    }
+
+    res.json({ success: true, data: games });
+  } catch (error) {
+    console.error('Get Games Error:', error);
+    res.status(500).json({ 
+      success: false, 
+      error: 'Failed to fetch games',
+      details: error.message 
+    });
+  }
+});
+
+const getGameById = asyncHandler(async (req, res) => {
+  try {
+    const game = await Game.findById(req.params.id);
+    
+    if (!game) {
       res.status(404);
-      throw new Error('No active questions found');
+      throw new Error('Game not found');
     }
     
     res.json({
       success: true,
-      count: questions.length,
-      data: questions
+      data: game
     });
   } catch (error) {
-    console.error('Error fetching quiz questions:', error);
+    console.error('Error fetching game:', error);
     res.status(500).json({
       success: false,
       error: 'Server Error'
@@ -46,80 +70,101 @@ const getQuizQuestions = asyncHandler(async (req, res) => {
   }
 });
 
-const submitQuizAnswers = asyncHandler(async (req, res) => {
+const submitGameResults = asyncHandler(async (req, res) => {
   try {
-    const { answers } = req.body;
+    const { gameId, gameType, answers, pairsMatched, totalPairs } = req.body;
 
-    // Validate input
-    if (!answers || !Array.isArray(answers)) {
+    if (!gameId || !gameType) {
       return res.status(400).json({
         success: false,
-        error: 'Answers must be provided as an array'
+        error: 'Game ID and type are required'
       });
     }
 
-    if (answers.length === 0) {
-      return res.status(400).json({
-        success: false,
-        error: 'At least one answer must be provided'
-      });
-    }
+    let score = 0;
+    let totalQuestions = 0;
+    let results = [];
 
-    // Process answers
-    const questionIds = answers.map(answer => {
-      try {
-        return new mongoose.Types.ObjectId(answer.questionId);
-      } catch (err) {
-        return null;
+    if (gameType === 'quiz') {
+      if (!answers || !Array.isArray(answers)) {
+        return res.status(400).json({
+          success: false,
+          error: 'Answers must be provided as an array for quiz games'
+        });
       }
-    }).filter(id => id !== null);
 
-    const questions = await QuizQuestion.find({ 
-      _id: { $in: questionIds } 
-    });
+      const questionIds = answers.map(answer => {
+        try {
+          return new mongoose.Types.ObjectId(answer.questionId);
+        } catch (err) {
+          return null;
+        }
+      }).filter(id => id !== null);
 
-    const questionMap = {};
-    questions.forEach(q => {
-      questionMap[q._id.toString()] = q;
-    });
+      const game = await Game.findById(gameId);
+      if (!game) {
+        return res.status(404).json({
+          success: false,
+          error: 'Game not found'
+        });
+      }
 
-    const results = answers.map(answer => {
-      const question = questionMap[answer.questionId];
-      
-      if (!question) {
+      const questionMap = {};
+      game.questions.forEach(q => {
+        questionMap[q._id.toString()] = q;
+      });
+
+      results = answers.map(answer => {
+        const question = questionMap[answer.questionId];
+        
+        if (!question) {
+          return {
+            questionId: answer.questionId,
+            error: 'Question not found'
+          };
+        }
+
+        const selectedOption = question.options[answer.selectedOption];
+        const correctOption = question.options.find(opt => opt.isCorrect);
+
         return {
-          questionId: answer.questionId,
-          error: 'Question not found'
+          questionId: question._id,
+          questionText: question.questionText,
+          selectedOption: selectedOption?.optionText || 'Not answered',
+          correctOption: correctOption.optionText,
+          isCorrect: selectedOption?.isCorrect || false
         };
+      });
+
+      const validResults = results.filter(r => !r.error);
+      score = validResults.filter(r => r.isCorrect).length;
+      totalQuestions = validResults.length;
+    } else if (gameType === 'match') {
+      if (typeof pairsMatched !== 'number' || typeof totalPairs !== 'number') {
+        return res.status(400).json({
+          success: false,
+          error: 'Pairs data must be provided for match games'
+        });
       }
+      score = pairsMatched;
+      totalQuestions = totalPairs;
+    }
 
-      const selectedOption = question.options[answer.selectedOption];
-      const correctOption = question.options.find(opt => opt.isCorrect);
-
-      return {
-        questionId: question._id,
-        questionText: question.questionText,
-        selectedOption: selectedOption?.optionText || 'Not answered',
-        correctOption: correctOption.optionText,
-        isCorrect: selectedOption?.isCorrect || false
-      };
-    });
-
-    const validResults = results.filter(r => !r.error);
-    const score = validResults.filter(r => r.isCorrect).length;
-    const totalQuestions = validResults.length;
     const percentage = totalQuestions > 0 ? Math.round((score / totalQuestions) * 100) : 0;
 
-    // Save quiz result
-    const quizResult = new QuizResult({
+    const gameResult = new GameResult({
       user: req.user._id,
+      game: gameId,
+      gameType,
       score,
       totalQuestions,
       percentage,
-      answers: validResults
+      answers: results,
+      pairsMatched: gameType === 'match' ? pairsMatched : undefined,
+      totalPairs: gameType === 'match' ? totalPairs : undefined
     });
 
-    await quizResult.save();
+    await gameResult.save();
 
     res.json({
       success: true,
@@ -127,12 +172,14 @@ const submitQuizAnswers = asyncHandler(async (req, res) => {
         score,
         totalQuestions,
         percentage,
-        results: validResults,
-        resultId: quizResult._id
+        results,
+        pairsMatched,
+        totalPairs,
+        resultId: gameResult._id
       }
     });
   } catch (error) {
-    console.error('Error submitting quiz answers:', error);
+    console.error('Error submitting game results:', error);
     res.status(500).json({
       success: false,
       error: 'Server Error'
@@ -140,19 +187,20 @@ const submitQuizAnswers = asyncHandler(async (req, res) => {
   }
 });
 
-const getQuizResults = asyncHandler(async (req, res) => {
+const getGameResults = asyncHandler(async (req, res) => {
   try {
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 10;
     const skip = (page - 1) * limit;
 
     const [results, total] = await Promise.all([
-      QuizResult.find({ user: req.user._id })
+      GameResult.find({ user: req.user._id })
+        .populate('game', 'title type category')
         .sort({ createdAt: -1 })
         .skip(skip)
         .limit(limit)
         .lean(),
-      QuizResult.countDocuments({ user: req.user._id })
+      GameResult.countDocuments({ user: req.user._id })
     ]);
 
     res.json({
@@ -164,7 +212,7 @@ const getQuizResults = asyncHandler(async (req, res) => {
       data: results
     });
   } catch (error) {
-    console.error('Error fetching quiz results:', error);
+    console.error('Error fetching game results:', error);
     res.status(500).json({
       success: false,
       error: 'Server Error'
@@ -173,7 +221,8 @@ const getQuizResults = asyncHandler(async (req, res) => {
 });
 
 module.exports = {
-  getQuizQuestions,
-  submitQuizAnswers,
-  getQuizResults,
+  getGames,
+  getGameById,
+  submitGameResults,
+  getGameResults,
 };
