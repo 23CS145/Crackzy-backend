@@ -10,6 +10,7 @@ dotenv.config();
 
 connectDB();
 
+
 const authRoutes = require('./routes/authRoutes');
 const testRoutes = require('./routes/testRoutes');
 const noteRoutes = require('./routes/noteRoutes');
@@ -29,11 +30,27 @@ if (process.env.NODE_ENV === 'development') {
 const allowedOrigins = [
   'http://localhost:5173',   // Local frontend
   'https://crackzy.vercel.app', // Future deployed frontend
+  'http://localhost:3000'
 ];
 
-app.use(cors({
+// app.use(cors({
+//   origin: function (origin, callback) {
+//     if (!origin || allowedOrigins.includes(origin)) {
+//       callback(null, true);
+//     } else {
+//       callback(new Error('Not allowed by CORS'));
+//     }
+//   },
+//   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+//   allowedHeaders: ['Content-Type', 'Authorization'],
+//   credentials: true,
+// }));
+const corsOptions = {
   origin: function (origin, callback) {
-    if (!origin || allowedOrigins.includes(origin)) {
+    // Allow requests with no origin (like mobile apps or curl requests)
+    if (!origin) return callback(null, true);
+    
+    if (allowedOrigins.indexOf(origin) !== -1) {
       callback(null, true);
     } else {
       callback(new Error('Not allowed by CORS'));
@@ -41,10 +58,19 @@ app.use(cors({
   },
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
-  credentials: true,
-}));
+  credentials: true
+};
+
+app.use(cors(corsOptions));
 
 // Routes
+app.get('/', (req, res) => {
+  res.json({
+    message: 'Crackzy API is running',
+    status: 'healthy',
+    timestamp: new Date().toISOString()
+  });
+});
 app.use('/api/auth', authRoutes);
 app.use('/api/tests', testRoutes);
 app.use('/api/notes', noteRoutes);
